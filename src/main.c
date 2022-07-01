@@ -21,6 +21,7 @@
 */
 
 #include <stdlib.h>
+#include <string.h>
 #include <conio.h>
 #include <cx16.h>
 
@@ -38,32 +39,51 @@
 
 #define  WORLD_SPRITE_ADDRESS(i)      (0x4000 + i * 0x400)
 #define  GG_SPRITE_ADDRESS            0x7000
+#define  BIGWORLD_SPRITE_ADDRESS      0x8000
 
 #define  WORLD_TYPE_ASTEROID          0
-#define  WORLD_TYPE_TNORM             1
-#define  WORLD_TYPE_TUNDRIC           2
-#define  WORLD_TYPE_EXOTIC            3
-#define  WORLD_TYPE_HELLWORLD         4
+#define  WORLD_TYPE_TERRAN            1
+#define  WORLD_TYPE_ICEWORLD          2
+#define  WORLD_TYPE_PINK_OCEAN        3
+#define  WORLD_TYPE_ROCKY_YELLOW_SEAS 4
 #define  WORLD_TYPE_GREEN             5
-#define  WORLD_TYPE_PURPLE            6
-#define  WORLD_TYPE_DUSTY             7
+#define  WORLD_TYPE_PURPLE_CYAN       6
+#define  WORLD_TYPE_DUSTY_ORANGE_SEAS 7
 #define  WORLD_TYPE_TOXIC_SEAS        8
 #define  WORLD_TYPE_OCEAN             9
 #define  WORLD_TYPE_THIN_EXOTIC       10
 #define  WORLD_TYPE_GG                11
+#define  WORLD_TYPE_BIGWORLD          12
+
+#define  WORLD_TYPE_EMPTY_ORBIT       -1
+#define  ROCKBALL_WORLDS              2
+
 
 SpriteDefinition shipicon, worldicon, jamison;
 SpriteDefinition world[10];
+char worldSpec[25];
 
-char ggShow(int worldNum, int x, int y)
+char bigWorldShow(int sprNum, int x, int y)
 {
-   world[worldNum].block = GG_SPRITE_ADDRESS;
-   world[worldNum].mode  = SPRITE_MODE_8BPP;
-   world[worldNum].layer = SPRITE_LAYER_BACKGROUND;
-   world[worldNum].dimensions = SPRITE_64_BY_64;
-   world[worldNum].x     = SPRITE_X_SCALE(x);
-   world[worldNum].y     = SPRITE_Y_SCALE(y);
-   sprite_define(worldNum, &world[worldNum]);
+   world[sprNum].block = BIGWORLD_SPRITE_ADDRESS;
+   world[sprNum].mode  = SPRITE_MODE_8BPP;
+   world[sprNum].layer = SPRITE_LAYER_BACKGROUND;
+   world[sprNum].dimensions = SPRITE_64_BY_64;
+   world[sprNum].x     = SPRITE_X_SCALE(x-32);
+   world[sprNum].y     = SPRITE_Y_SCALE(y-16);
+   sprite_define(sprNum, &world[sprNum]);
+   return 'B';
+}
+
+char ggShow(int sprNum, int x, int y)
+{
+   world[sprNum].block = GG_SPRITE_ADDRESS;
+   world[sprNum].mode  = SPRITE_MODE_8BPP;
+   world[sprNum].layer = SPRITE_LAYER_BACKGROUND;
+   world[sprNum].dimensions = SPRITE_64_BY_64;
+   world[sprNum].x     = SPRITE_X_SCALE(x-32);
+   world[sprNum].y     = SPRITE_Y_SCALE(y-16);
+   sprite_define(sprNum, &world[sprNum]);
    return 'g';
 }
 
@@ -71,6 +91,9 @@ char worldShow(int sprNum, int worldType, int x, int y)
 {
    if (worldType == WORLD_TYPE_GG)
      return ggShow(sprNum, x, y);
+
+   if (worldType == WORLD_TYPE_BIGWORLD)
+     return bigWorldShow(sprNum, x, y);
    
    world[sprNum].block = WORLD_SPRITE_ADDRESS(worldType);
    world[sprNum].mode  = SPRITE_MODE_8BPP;
@@ -82,14 +105,42 @@ char worldShow(int sprNum, int worldType, int x, int y)
    return 'w';
 }
 
-void worldsShow()
+// char* buildWorldSpec(int belts, int ggs, int worlds)
+// {
+//    int total = belts + ggs + worlds;
+
+//    memset(worldSpec, 32, 25); // space (empty, right?)
+//    worldSpec[ total ] = 0;    // edge of system
+   
+//    return worldSpec;
+// }
+
+void worldsShow(char* spec)
 {
    int i;
    int worldType;
-   for(i=0; i<10; ++i)
+   int x = 70;
+   for(i=0; i<strlen(spec); ++i)
    {
-      worldType = rand() % 12; // 0 to 11
-      worldShow( i, worldType, 70 + i * 64, 240 );
+      switch(spec[i])
+      {         
+         case '?': worldType = rand() % 13;                    break;
+         case 'a': worldType = WORLD_TYPE_ASTEROID;            break;
+         case 'b': worldType = WORLD_TYPE_BIGWORLD;            break; // BigWorld
+         case 'g': worldType = WORLD_TYPE_GG;                  break;
+         case 'h': worldType = WORLD_TYPE_TERRAN;              break; // Hospitable
+         case 'i': worldType = WORLD_TYPE_DUSTY_ORANGE_SEAS;   break; // Inferno World
+         case 'r': worldType = WORLD_TYPE_GREEN;   break; // RadWorld
+         case 't': worldType = WORLD_TYPE_ICEWORLD;            break;
+         case 'w': worldType = rand() % 9 + ROCKBALL_WORLDS;   break;
+         default: worldType = WORLD_TYPE_EMPTY_ORBIT;          break;
+      }
+      if (worldType >= WORLD_TYPE_GG) x += 64;
+      else x += 32;
+
+      x += 4; // padding
+
+      worldShow( i, worldType, x, 240 );
    }
 }
 
@@ -158,14 +209,14 @@ void splash()
 void run()
 {
       // show worlds
-   sprite_loadToVERA("bi-as32.bin",     0x4000);
+   sprite_loadToVERA("bi-rocks32.bin",     0x4000);
    sprite_loadToVERA("bi-worlds32.bin", 0x4400);
    sprite_loadToVERA("bi-gg64.bin",     0x7000);
+   sprite_loadToVERA("bi-bigw64.bin",   0x8000);
 
-   cputsxy(20,20,"press a key to refresh");
    for(;;)
    {
-      worldsShow();
+      worldsShow("wwwwg");
       cgetc();
    }
 }
